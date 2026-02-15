@@ -41,13 +41,31 @@ html {
     -webkit-backdrop-filter: blur(15px);
     border-right: 1px solid var(--glass-border);
     padding: 2rem;
+    padding-bottom: 5rem;
+    /* Space for the export button at bottom */
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
     gap: 2rem;
     pointer-events: auto;
     overflow-y: auto;
-    /* Allow scrolling */
+    padding-bottom: 8rem;
+    /* Extra space for export */
+}
+
+/* Custom scrollbar for visibility */
+#ui-overlay::-webkit-scrollbar {
+    width: 6px;
+}
+
+#ui-overlay::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+#ui-overlay::-webkit-scrollbar-thumb {
+    background: var(--accent-color);
+    border-radius: 3px;
+    opacity: 0.3;
 }
 
 header h1 {
@@ -55,6 +73,7 @@ header h1 {
     margin: 0;
     background: linear-gradient(90deg, #fff, var(--accent-color));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     letter-spacing: -0.02em;
 }
@@ -161,4 +180,24 @@ button.active {
 .button-group button.accent {
     background: var(--accent-color);
     color: #000;
+}
+
+#project-list {
+    width: 100%;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--accent-color) !important;
+}
+
+#btn-delete-shape {
+    border-color: rgba(255, 50, 50, 0.4);
+}
+
+#btn-delete-shape:hover {
+    background: rgba(255, 50, 50, 0.3);
+    border-color: #ff3232;
+}
+
+color: #000;
 }
