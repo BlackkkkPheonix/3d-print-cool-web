@@ -71,6 +71,7 @@ class App {
         this.animate();
 
         window.addEventListener('resize', () => this.onResize());
+        window.addEventListener('keydown', (e) => this.onKeyDown(e));
     }
 
     initUI() {
@@ -1110,6 +1111,20 @@ class App {
         area.innerText = text;
         area.classList.add('show');
         setTimeout(() => area.classList.remove('show'), 4000);
+    }
+
+    onKeyDown(event) {
+        if (event.key === 'Escape') {
+            const selectBtn = document.getElementById('id-btn-select');
+            this.toggleTool('select', selectBtn);
+            this.showNotification("Mode canceled. Selection active.");
+        }
+        if (event.code === 'Delete' || event.code === 'Backspace') {
+            // Only delete if not typing in a project name or number input
+            if (document.activeElement.tagName !== 'INPUT') {
+                this.deleteSelectedShape();
+            }
+        }
     }
 
     onResize() {
