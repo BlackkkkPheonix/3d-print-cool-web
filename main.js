@@ -305,7 +305,8 @@ class App {
                 transparent: true,
                 opacity: 0.8,
                 metalness: 0.5,
-                roughness: 0.2
+                roughness: 0.2,
+                side: THREE.DoubleSide
             });
 
             const mesh = new THREE.Mesh(geometry, material);
@@ -589,7 +590,8 @@ class App {
                 transparent: true,
                 opacity: 0.8,
                 metalness: 0.5,
-                roughness: 0.2
+                roughness: 0.2,
+                side: THREE.DoubleSide
             });
             const mesh = new THREE.Mesh(geometry, material);
             mesh.position.copy(position);
