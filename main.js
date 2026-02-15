@@ -250,9 +250,12 @@ class App {
         if (type === 'SphereGeometry') return "Sphere";
         if (type === 'CylinderGeometry') return "Cylinder";
         if (type === 'ConeGeometry') return "Cone";
-        if (type === 'TorusGeometry') return "Circle";
-        if (type === 'RingGeometry') return "Ring";
-        if (type === 'TubeGeometry') return "Sketch";
+        if (type === 'TorusGeometry') return "Ring";
+        if (type === 'CylinderGeometry') {
+            // Check if it's a disk or a full cylinder based on height
+            return mesh.geometry.parameters.height < 0.2 ? "Circle" : "Cylinder";
+        }
+        if (type === 'RingGeometry') return "Flat Ring";
         return "Shape";
     }
 
@@ -374,8 +377,8 @@ class App {
             case 'sphere': geometry = new THREE.SphereGeometry(0.7, 32, 32); break;
             case 'cylinder': geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 32); break;
             case 'cone': geometry = new THREE.ConeGeometry(0.5, 1, 32); break;
-            case 'circle': geometry = new THREE.TorusGeometry(0.5, 0.05, 32, 128); break;
-            case 'ring': geometry = new THREE.RingGeometry(0.3, 0.6, 128); break;
+            case 'circle': geometry = new THREE.CylinderGeometry(0.5, 0.5, 0.1, 64); break; // Solid disk
+            case 'ring': geometry = new THREE.TorusGeometry(0.5, 0.1, 32, 128); break; // 3D Ring
         }
 
         const mesh = new THREE.Mesh(geometry, material);
