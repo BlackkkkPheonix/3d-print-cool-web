@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "vite preview --host ::"
+    "start": "vite preview --host :: --port $PORT"
   },
   "keywords": [],
   "author": "",
