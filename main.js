@@ -248,14 +248,13 @@ class App {
         const type = mesh.geometry.type;
         if (type === 'BoxGeometry') return "Cube";
         if (type === 'SphereGeometry') return "Sphere";
-        if (type === 'CylinderGeometry') return "Cylinder";
         if (type === 'ConeGeometry') return "Cone";
         if (type === 'TorusGeometry') return "Ring";
         if (type === 'CylinderGeometry') {
-            // Check if it's a disk or a full cylinder based on height
             return mesh.geometry.parameters.height < 0.2 ? "Circle" : "Cylinder";
         }
         if (type === 'RingGeometry') return "Flat Ring";
+        if (type === 'TubeGeometry') return "Sketch";
         return "Shape";
     }
 
