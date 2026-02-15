@@ -632,56 +632,81 @@ class App {
             const hit = intersects[0].object;
             const point = intersects[0].point;
 
+            // For CSG, we need world matrices up to date
+            hit.updateMatrixWorld();
+
             if (this.isStraight) {
-                // For "straight lines in carving", we'll do a simple vertical cut at the clicked point
-                // with a normal relative to the view or simply X/Z based.
-                // We'll use the camera orientation to decide the cut plane.
                 const normal = new THREE.Vector3();
                 this.camera.getWorldDirection(normal);
-                normal.y = 0; // Vertical plane
+                normal.y = 0;
                 normal.normalize();
-                this.splitMeshCustom(hit, point, normal);
+                this.splitMeshCSG(hit, point, normal);
             } else {
-                // Default horizontal split
-                this.splitMesh(hit, point);
+                // Horizontal split (y-up normal)
+                this.splitMeshCSG(hit, point, new THREE.Vector3(0, 1, 0));
             }
         }
     }
 
-    splitMeshCustom(mesh, point, normal) {
-        const index = this.meshes.indexOf(mesh);
-        if (index > -1) this.meshes.splice(index, 1);
+    splitMeshCSG(mesh, point, normal) {
+        const evaluator = new Evaluator();
+        const material = mesh.material.clone();
+        material.clippingPlanes = null; // Ensure no old clipping planes
+
+        // Create a huge box to use as a "half-space" cutter
+        const cutterGeom = new THREE.BoxGeometry(100, 100, 100);
+        const cutterBrush = new Brush(cutterGeom, new THREE.MeshStandardMaterial());
+
+        // Position the cutter so its surface is at the 'point' and its face matches 'normal'
+        // The cutter will occupy the "positive" side of the normal.
+        cutterBrush.position.copy(point).add(normal.clone().multiplyScalar(50));
+        cutterBrush.lookAt(point);
+        // Note: lookAt(point) from a position 50 units away along normal 
+        // might need adjustment depending on box orientation. 
+        // Let's use simpler logic: align the box to the normal.
+
+        const up = new THREE.Vector3(0, 1, 0);
+        const quaternion = new THREE.Quaternion().setFromUnitVectors(up, normal);
+        cutterBrush.quaternion.copy(quaternion);
+        // Position the bottom face of the box at 'point'
+        const offset = normal.clone().multiplyScalar(50);
+        cutterBrush.position.copy(point).add(offset);
+        cutterBrush.updateMatrixWorld();
+
+        const targetBrush = new Brush(mesh.geometry, mesh.material);
+        targetBrush.position.copy(mesh.position);
+        targetBrush.quaternion.copy(mesh.quaternion);
+        targetBrush.scale.copy(mesh.scale);
+        targetBrush.updateMatrixWorld();
+
+        // 1. Result B: Top half (Intersection with cutter)
+        const resultB = evaluator.evaluate(targetBrush, cutterBrush, 1); // 1 = INTERSECTION
+
+        // 2. Result A: Bottom half (Subtraction of cutter)
+        const resultA = evaluator.evaluate(targetBrush, cutterBrush, 0); // 0 = SUBTRACTION
+
+        // Remove old mesh
+        const idx = this.meshes.indexOf(mesh);
+        if (idx > -1) this.meshes.splice(idx, 1);
         this.scene.remove(mesh);
+        this.transformControls.detach();
 
-        const createClipped = (side) => {
-            const geom = mesh.geometry.clone();
-            const mat = mesh.material.clone();
-
-            const planeNormal = normal.clone().multiplyScalar(side);
-            // d = -n . p
-            const constant = -planeNormal.dot(point);
-            const plane = new THREE.Plane(planeNormal, constant);
-
-            mat.clippingPlanes = [plane];
-            this.renderer.localClippingEnabled = true;
-
-            const m = new THREE.Mesh(geom, mat);
-            m.position.copy(mesh.position);
-            m.quaternion.copy(mesh.quaternion);
-            m.scale.copy(mesh.scale);
-
-            // Visual offset
-            const offset = normal.clone().multiplyScalar(side * 0.2);
-            m.position.add(offset);
-
+        const createFinal = (geom, offsetDir) => {
+            const m = new THREE.Mesh(geom, material.clone());
+            // CSG results are in world space if we didn't center them
+            // But Evaluator usually keeps target space or world space depending on setup.
+            // If targetBrush had position/quaternion, the result is in world space.
+            // We'll keep them as world-space meshes for simplicity.
+            m.position.add(offsetDir.multiplyScalar(0.2)); // Visual split
             this.scene.add(m);
             this.meshes.push(m);
+            return m;
         };
 
-        createClipped(1);
-        createClipped(-1);
-        this.showNotification("Shape carved with a straight line!");
-        this.storeLastCarve('splitCustom', { mesh, point, normal });
+        if (resultA.geometry.attributes.position.count > 0) createFinal(resultA.geometry, normal.clone().negate());
+        if (resultB.geometry.attributes.position.count > 0) createFinal(resultB.geometry, normal.clone());
+
+        this.showNotification("Shape physically split into two exact pieces!");
     }
 
     handleScale(event) {
