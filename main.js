@@ -374,8 +374,8 @@ class App {
             case 'sphere': geometry = new THREE.SphereGeometry(0.7, 32, 32); break;
             case 'cylinder': geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 32); break;
             case 'cone': geometry = new THREE.ConeGeometry(0.5, 1, 32); break;
-            case 'circle': geometry = new THREE.TorusGeometry(0.5, 0.05, 16, 100); break;
-            case 'ring': geometry = new THREE.RingGeometry(0.3, 0.6, 32); break;
+            case 'circle': geometry = new THREE.TorusGeometry(0.5, 0.05, 32, 128); break;
+            case 'ring': geometry = new THREE.RingGeometry(0.3, 0.6, 128); break;
         }
 
         const mesh = new THREE.Mesh(geometry, material);
