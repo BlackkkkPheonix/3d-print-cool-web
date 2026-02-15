@@ -60,8 +60,10 @@ class App {
         this.isBending = false;
         this.isSketchCarving = false;
         this.lastCarve = null;
+        this.currentProjectName = "Untitled Project";
 
         this.initUI();
+        this.updateProjectList();
         this.animate();
 
         window.addEventListener('resize', () => this.onResize());
@@ -129,6 +131,13 @@ initUI() {
 
     document.getElementById('btn-export').onclick = () => this.exportDesign();
 
+    // Project Management Bindings
+    document.getElementById('btn-project-save').onclick = () => this.saveProject();
+    document.getElementById('btn-project-new').onclick = () => this.newProject();
+    document.getElementById('btn-project-delete').onclick = () => this.deleteSelectedProject();
+    document.getElementById('project-list').onchange = (e) => this.loadProject(e.target.value);
+    document.getElementById('btn-delete-shape').onclick = () => this.deleteSelectedShape();
+
     // Event listeners for drawing
     this.renderer.domElement.addEventListener('pointerdown', (e) => this.onPointerDown(e));
     this.renderer.domElement.addEventListener('pointermove', (e) => this.onPointerMove(e));
@@ -194,13 +203,128 @@ toggleTool(tool, btn) {
     }
 }
 
-clearAll() {
-    if (confirm("Clear your entire design?")) {
+clearAll(silent = false) {
+    if (silent || confirm("Clear your entire design?")) {
         this.meshes.forEach(m => this.scene.remove(m));
         this.meshes = [];
         this.transformControls.detach();
-        this.showNotification("Design cleared.");
+        if (!silent) this.showNotification("Design cleared.");
     }
+}
+
+deleteSelectedShape() {
+    if (this.transformControls.object) {
+        const mesh = this.transformControls.object;
+        this.scene.remove(mesh);
+        this.meshes = this.meshes.filter(m => m !== mesh);
+        this.transformControls.detach();
+        this.showNotification("Shape deleted.");
+    } else {
+        this.showNotification("Select a shape first!");
+    }
+}
+
+// PROJECT MANAGEMENT
+serializeScene() {
+    const data = this.meshes.map(m => {
+        return {
+            type: m.geometry.type,
+            parameters: m.geometry.parameters,
+            position: m.position.toArray(),
+            rotation: m.rotation.toArray(),
+            scale: m.scale.toArray(),
+            color: m.material.color.getHex()
+        };
+    });
+    return JSON.stringify(data);
+}
+
+saveProject() {
+    const name = prompt("Project Name:", this.currentProjectName) || this.currentProjectName;
+    const projects = JSON.parse(localStorage.getItem('3d-artisan-projects') || '{}');
+    projects[name] = this.serializeScene();
+    localStorage.setItem('3d-artisan-projects', JSON.stringify(projects));
+    this.currentProjectName = name;
+    this.updateProjectList();
+    this.showNotification(`Project "${name}" saved!`);
+}
+
+loadProject(name) {
+    if (!name) return;
+    const projects = JSON.parse(localStorage.getItem('3d-artisan-projects') || '{}');
+    const data = JSON.parse(projects[name]);
+    if (!data) return;
+
+    this.clearAll(true);
+    data.forEach(item => {
+        let geometry;
+        // Reconstruct geometries based on type
+        if (item.type === 'BoxGeometry') geometry = new THREE.BoxGeometry(...Object.values(item.parameters));
+        else if (item.type === 'SphereGeometry') geometry = new THREE.SphereGeometry(...Object.values(item.parameters));
+        else if (item.type === 'CylinderGeometry') geometry = new THREE.CylinderGeometry(...Object.values(item.parameters));
+        else if (item.type === 'ConeGeometry') geometry = new THREE.ConeGeometry(...Object.values(item.parameters));
+        else if (item.type === 'TorusGeometry') geometry = new THREE.TorusGeometry(...Object.values(item.parameters));
+        else geometry = new THREE.BoxGeometry(1, 1, 1); // Fallback
+
+        const material = new THREE.MeshStandardMaterial({
+            color: item.color,
+            transparent: true,
+            opacity: 0.8,
+            metalness: 0.5,
+            roughness: 0.2
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.fromArray(item.position);
+        mesh.rotation.fromArray(item.rotation);
+        mesh.scale.fromArray(item.scale);
+
+        this.scene.add(mesh);
+        this.meshes.push(mesh);
+    });
+
+    this.currentProjectName = name;
+    this.showNotification(`Loaded "${name}"`);
+}
+
+deleteSelectedProject() {
+    const select = document.getElementById('project-list');
+    const name = select.value;
+    if (!name) return;
+
+    if (confirm(`Delete project "${name}"?`)) {
+        const projects = JSON.parse(localStorage.getItem('3d-artisan-projects') || '{}');
+        delete projects[name];
+        localStorage.setItem('3d-artisan-projects', JSON.stringify(projects));
+        this.updateProjectList();
+        this.newProject();
+        this.showNotification("Project deleted.");
+    }
+}
+
+newProject() {
+    this.clearAll(true);
+    this.currentProjectName = "Untitled Project";
+    document.getElementById('project-list').value = "";
+    this.showNotification("New Project started.");
+}
+
+updateProjectList() {
+    const select = document.getElementById('project-list');
+    const projects = JSON.parse(localStorage.getItem('3d-artisan-projects') || '{}');
+
+    // Preserve current value if it still exists
+    const currentVal = select.value;
+
+    select.innerHTML = '<option value="">-- Select Project --</option>';
+    Object.keys(projects).forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        select.appendChild(opt);
+    });
+
+    if (projects[currentVal]) select.value = currentVal;
 }
 
 addPrimitive(type, position = null) {
