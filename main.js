@@ -25,6 +25,7 @@ class App {
         this.controls.enableDamping = true;
 
         this.transformControls = new TransformControls(this.camera, this.renderer.domElement);
+        this.transformControls.setSize(1.5); // Make handles easier to grab
         this.transformControls.addEventListener('dragging-changed', (event) => {
             this.controls.enabled = !event.value;
         });
@@ -149,6 +150,8 @@ class App {
     toggleTool(tool, btn) {
         const isActive = btn.classList.contains('active');
 
+        const selectedObject = this.transformControls.object;
+
         // Reset others
         this.isSelecting = false;
         this.isDrawing = false;
@@ -158,7 +161,13 @@ class App {
         this.isCircleDrawing = false;
         this.isBending = false;
         this.isSketchCarving = false;
-        this.transformControls.detach();
+
+        // Only detach if we are switching to a non-transforming tool
+        const transformTools = ['select', 'scale', 'rotate']; // Adding rotate for future
+        if (!transformTools.includes(tool)) {
+            this.transformControls.detach();
+        }
+
         this.hideRepeatPrompt();
         document.querySelectorAll('button').forEach(b => b.classList.remove('active'));
 
@@ -173,7 +182,19 @@ class App {
         if (tool === 'select') {
             this.isSelecting = true;
             btn.classList.add('active');
+            if (selectedObject) {
+                this.transformControls.setMode('translate');
+                this.transformControls.attach(selectedObject);
+            }
             this.showNotification("Select mode active. Move or scale shapes.");
+        } else if (tool === 'scale') {
+            this.isScaling = true;
+            btn.classList.add('active');
+            if (selectedObject) {
+                this.transformControls.setMode('scale');
+                this.transformControls.attach(selectedObject);
+            }
+            this.showNotification("Scale mode active. Drag handles to resize.");
         } else if (tool === 'draw') {
             this.isDrawing = true;
             btn.classList.add('active');
@@ -1149,9 +1170,16 @@ class App {
             this.showNotification("Mode canceled. Selection active.");
         }
         if (event.code === 'Delete' || event.code === 'Backspace') {
-            // Only delete if not typing in a project name or number input
             if (document.activeElement.tagName !== 'INPUT') {
                 this.deleteSelectedShape();
+            }
+        }
+        if (this.transformControls.object) {
+            if (event.key.toLowerCase() === 't') this.transformControls.setMode('translate');
+            if (event.key.toLowerCase() === 'r') this.transformControls.setMode('rotate');
+            if (event.key.toLowerCase() === 's') {
+                this.transformControls.setMode('scale');
+                this.showNotification("Scale mode active. Drag handles to resize.");
             }
         }
     }
