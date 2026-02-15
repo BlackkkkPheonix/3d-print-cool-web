@@ -6,6 +6,6 @@ setupStates = ["node"]
 nodeVersion = "22"
 
 [deploy]
-startCommand = "npx vite preview --host 0.0.0.0 --port $PORT"
+startCommand = "npm start"
 healthcheckPath = "/"
 healthcheckTimeout = 300
