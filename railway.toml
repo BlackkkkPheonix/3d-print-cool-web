@@ -3,6 +3,7 @@ builder = "nixpacks"
 
 [build.nixpacks]
 setupStates = ["node"]
+nodeVersion = "22"
 
 [deploy]
 startCommand = "npm start"
